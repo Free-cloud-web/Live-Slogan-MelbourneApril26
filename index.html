@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Rally Live System</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: black;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+#text {
+  font-size: 8vw;
+  font-weight: bold;
+  text-align: center;
+  padding: 20px;
+}
+
+#sub {
+  font-size: 3vw;
+  color: yellow;
+  margin-top: 20px;
+}
+
+.fade {
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+</style>
+</head>
+
+<body>
+
+<div id="text"></div>
+<div id="sub"></div>
+
+<script>
+/* =========================
+   CONFIG TIME (Melbourne)
+========================= */
+const START_TIME = new Date("2026-04-25T15:00:00+10:00").getTime(); // Melbourne 3PM
+
+const now = () => Date.now();
+
+/* =========================
+   HELPERS
+========================= */
+function inRange(t, start, end) {
+  return t >= start && t < end;
+}
+
+function show(main, sub = "") {
+  document.getElementById("text").innerText = main;
+  document.getElementById("sub").innerText = sub;
+}
+
+/* =========================
+   INJECTION POOL
+========================= */
+const inject = [
+  "JAAVID SHAH",
+  "KING REZA PAHLAVI"
+];
+
+function maybeInject() {
+  return Math.random() < 0.25
+    ? inject[Math.floor(Math.random() * inject.length)]
+    : null;
+}
+
+/* =========================
+   BLOCK SYSTEM
+========================= */
+function run() {
+  const t = now();
+
+  const elapsed = t - START_TIME;
+
+  // before event
+  if (elapsed < 0) {
+    const sec = Math.floor(-elapsed / 1000);
+    show("RALLY STARTS SOON", `in ${sec}s`);
+    return;
+  }
+
+  const min = Math.floor(elapsed / 60000);
+
+  /* =========================
+     BLOCK 1 (0–20 min)
+  ========================= */
+  if (min < 20) {
+    const set1 = [
+      "Freedom! Freedom!",
+      "Long live Iran!",
+      "Free Iran!",
+      "Melbourne stands with Iran",
+      "Internet is our right!",
+      "Freedom is our right!"
+    ];
+
+    const index = Math.floor(elapsed / 30000) % set1.length;
+
+    const inj = maybeInject();
+    show(set1[index], inj || "");
+    return;
+  }
+
+  /* =========================
+     BLOCK 2 (20–30 min)
+  ========================= */
+  if (min < 30) {
+    const set2 = [
+      ["What do we want?", "Freedom!"],
+      ["When do we want it?", "NOW!"],
+      ["What do we want?", "Regime change!"],
+      ["When do we want it?", "NOW!"],
+      ["NOW! NOW! NOW!", "Stand up! Fight back!"]
+    ];
+
+    const index = Math.floor(elapsed / 30000) % set2.length;
+    const inj = maybeInject();
+
+    show(set2[index][0], set2[index][1] + (inj ? " | " + inj : ""));
+    return;
+  }
+
+  /* =========================
+     BLOCK 3 (30–75 min MARCH)
+========================= */
+  if (min < 75) {
+    const waves = [
+      [
+        "Free Iran!",
+        "We won't be silent!"
+      ],
+      [
+        "No to dictatorship!",
+        "Down with regime!"
+      ],
+      [
+        "Free internet!",
+        "Freedom is our right!"
+      ],
+      [
+        "Say his name",
+        "Reza Pahlavi"
+      ]
+    ];
+
+    const waveIndex = Math.floor(elapsed / (7 * 60000)) % waves.length;
+    const index = Math.floor(elapsed / 10000) % waves[waveIndex].length;
+
+    const inj = maybeInject();
+
+    show(waves[waveIndex][index], inj || "");
+    return;
+  }
+
+  /* =========================
+     BLOCK 4 (Arrival)
+  ========================= */
+  if (min < 90) {
+    const set = [
+      "Long live Iran!",
+      "Free Iran!",
+      "Until Iran is free!"
+    ];
+
+    const index = Math.floor(elapsed / 30000) % set.length;
+    const inj = maybeInject();
+
+    show(set[index], inj || "");
+    return;
+  }
+
+  /* =========================
+     BLOCK 5 (FINAL + SPEECH)
+  ========================= */
+
+  const speechMode = min >= 90 && min < 150;
+
+  if (speechMode) {
+    const loop = [
+      "SPEECH IN PROGRESS",
+      "PLEASE STAND BY"
+    ];
+
+    const index = Math.floor(elapsed / 30000) % 2;
+    show(loop[index], "30 MIN SLOT");
+    return;
+  }
+
+  const finalSet = [
+    ["Iran’s voice", "Iran’s choice → Reza Pahlavi"],
+    ["Long live Iran", ""],
+    ["Freedom!", "Freedom!"],
+    ["Until Iran is free", "We won’t stop"]
+  ];
+
+  const index = Math.floor(elapsed / 30000) % finalSet.length;
+
+  show(finalSet[index][0], finalSet[index][1]);
+}
+
+/* =========================
+   LOOP ENGINE
+========================= */
+setInterval(run, 1000);
+run();
+</script>
+
+</body>
+</html>
