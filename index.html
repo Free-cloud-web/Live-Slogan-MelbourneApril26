@@ -2,219 +2,267 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Rally Live System</title>
+<title>Rally System</title>
 
 <style>
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
   background: black;
   color: white;
+  font-family: Arial;
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
   height: 100vh;
+  flex-direction: column;
+  text-align: center;
 }
 
-#text {
-  font-size: 8vw;
+#main {
+  font-size: 7vw;
   font-weight: bold;
-  text-align: center;
-  padding: 20px;
 }
 
 #sub {
   font-size: 3vw;
-  color: yellow;
   margin-top: 20px;
+  color: yellow;
 }
 
-.fade {
-  opacity: 0;
-  transition: opacity 0.5s;
+#adminPanel {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(0,0,0,0.9);
+  border: 1px solid white;
+  padding: 10px;
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+}
+
+button {
+  padding: 8px;
+  font-size: 14px;
 }
 </style>
 </head>
 
 <body>
 
-<div id="text"></div>
+<div id="main"></div>
 <div id="sub"></div>
+
+<div id="adminPanel">
+  <button onclick="pause()">Pause</button>
+  <button onclick="resume()">Resume</button>
+  <button onclick="hold()">Hold</button>
+  <button onclick="go(1)">Block 1</button>
+  <button onclick="go(2)">Block 2</button>
+  <button onclick="go(3)">Block 3</button>
+  <button onclick="go(4)">Block 4</button>
+  <button onclick="go(5)">Final</button>
+</div>
 
 <script>
 /* =========================
-   CONFIG TIME (Melbourne)
+   TIME CONFIG (Melbourne 3PM)
 ========================= */
-const START_TIME = new Date("2026-04-25T15:00:00+10:00").getTime(); // Melbourne 3PM
+const START = new Date("2026-04-25T15:00:00+10:00").getTime();
 
-const now = () => Date.now();
+let paused = false;
+let holdMode = false;
+let manualBlock = null;
+let pauseTime = 0;
 
 /* =========================
-   HELPERS
+   ADMIN ACCESS (long press)
 ========================= */
-function inRange(t, start, end) {
-  return t >= start && t < end;
+let pressTimer;
+
+document.body.addEventListener("mousedown", startPress);
+document.body.addEventListener("mouseup", cancelPress);
+document.body.addEventListener("touchstart", startPress);
+document.body.addEventListener("touchend", cancelPress);
+
+function startPress() {
+  pressTimer = setTimeout(() => {
+    const code = prompt("Admin Code:");
+    if (code === "2604") {
+      document.getElementById("adminPanel").style.display = "flex";
+    }
+  }, 3000);
 }
 
-function show(main, sub = "") {
-  document.getElementById("text").innerText = main;
+function cancelPress() {
+  clearTimeout(pressTimer);
+}
+
+/* =========================
+   ADMIN FUNCTIONS
+========================= */
+function pause() {
+  paused = true;
+  pauseTime = Date.now();
+}
+
+function resume() {
+  if (paused) {
+    START += (Date.now() - pauseTime);
+  }
+  paused = false;
+}
+
+function hold() {
+  holdMode = !holdMode;
+}
+
+function go(b) {
+  manualBlock = b;
+}
+
+/* =========================
+   DISPLAY
+========================= */
+function show(main, sub="") {
+  document.getElementById("main").innerText = main;
   document.getElementById("sub").innerText = sub;
 }
 
 /* =========================
-   INJECTION POOL
+   SYSTEM LOOP
 ========================= */
-const inject = [
-  "JAAVID SHAH",
-  "KING REZA PAHLAVI"
-];
+setInterval(run, 1000);
 
-function maybeInject() {
-  return Math.random() < 0.25
-    ? inject[Math.floor(Math.random() * inject.length)]
-    : null;
-}
-
-/* =========================
-   BLOCK SYSTEM
-========================= */
 function run() {
-  const t = now();
+  if (paused) return;
 
-  const elapsed = t - START_TIME;
+  const now = Date.now();
+  const t = now - START;
 
-  // before event
-  if (elapsed < 0) {
-    const sec = Math.floor(-elapsed / 1000);
-    show("RALLY STARTS SOON", `in ${sec}s`);
+  if (t < 0) {
+    show("RALLY STARTS SOON", "");
     return;
   }
 
-  const min = Math.floor(elapsed / 60000);
+  const min = Math.floor(t / 60000);
 
   /* =========================
      BLOCK 1 (0–20 min)
   ========================= */
-  if (min < 20) {
-    const set1 = [
+  if (min < 20 || manualBlock === 1) {
+    const list = [
       "Freedom! Freedom!",
       "Long live Iran!",
       "Free Iran!",
       "Melbourne stands with Iran",
       "Internet is our right!",
-      "Freedom is our right!"
+      "Freedom is our right!",
+      "JAAVID SHAH",
+      "KING REZA PAHLAVI"
     ];
 
-    const index = Math.floor(elapsed / 30000) % set1.length;
-
-    const inj = maybeInject();
-    show(set1[index], inj || "");
+    const i = Math.floor(t / 30000) % list.length;
+    show(list[i]);
     return;
   }
 
   /* =========================
      BLOCK 2 (20–30 min)
   ========================= */
-  if (min < 30) {
-    const set2 = [
-      ["What do we want?", "Freedom!"],
-      ["When do we want it?", "NOW!"],
-      ["What do we want?", "Regime change!"],
-      ["When do we want it?", "NOW!"],
-      ["NOW! NOW! NOW!", "Stand up! Fight back!"]
+  if (min < 30 || manualBlock === 2) {
+    const list = [
+      "What do we want? → Freedom!",
+      "When do we want it? → NOW!",
+      "What do we want? → Regime change!",
+      "When do we want it? → NOW!",
+      "NOW! NOW! NOW!",
+      "Stand up! Fight back!",
+      "JAAVID SHAH",
+      "KING REZA PAHLAVI"
     ];
 
-    const index = Math.floor(elapsed / 30000) % set2.length;
-    const inj = maybeInject();
-
-    show(set2[index][0], set2[index][1] + (inj ? " | " + inj : ""));
+    const i = Math.floor(t / 30000) % list.length;
+    show(list[i]);
     return;
   }
 
   /* =========================
-     BLOCK 3 (30–75 min MARCH)
-========================= */
-  if (min < 75) {
+     BLOCK 3 (MARCH 30–75)
+  ========================= */
+  if (min < 75 || manualBlock === 3) {
     const waves = [
       [
         "Free Iran!",
-        "We won't be silent!"
+        "We won't be silent!",
+        "JAAVID SHAH"
       ],
       [
-        "No to dictatorship!",
-        "Down with regime!"
+        "No to regime!",
+        "Down with dictatorship!",
+        "KING REZA PAHLAVI"
       ],
       [
         "Free internet!",
-        "Freedom is our right!"
+        "Freedom is our right!",
+        "JAAVID SHAH"
       ],
       [
         "Say his name",
-        "Reza Pahlavi"
+        "Reza Pahlavi",
+        "KING REZA PAHLAVI"
       ]
     ];
 
-    const waveIndex = Math.floor(elapsed / (7 * 60000)) % waves.length;
-    const index = Math.floor(elapsed / 10000) % waves[waveIndex].length;
+    const w = Math.floor(t / 420000) % waves.length;
+    const i = Math.floor(t / 10000) % waves[w].length;
 
-    const inj = maybeInject();
-
-    show(waves[waveIndex][index], inj || "");
+    show(waves[w][i]);
     return;
   }
 
   /* =========================
      BLOCK 4 (Arrival)
   ========================= */
-  if (min < 90) {
-    const set = [
+  if (min < 90 || manualBlock === 4) {
+    const list = [
       "Long live Iran!",
       "Free Iran!",
-      "Until Iran is free!"
+      "Until Iran is free!",
+      "JAAVID SHAH",
+      "KING REZA PAHLAVI"
     ];
 
-    const index = Math.floor(elapsed / 30000) % set.length;
-    const inj = maybeInject();
-
-    show(set[index], inj || "");
+    const i = Math.floor(t / 30000) % list.length;
+    show(list[i]);
     return;
   }
 
   /* =========================
-     BLOCK 5 (FINAL + SPEECH)
+     BLOCK 5 (FINAL / SPEECH)
   ========================= */
+  if (manualBlock === 5 || min >= 90) {
 
-  const speechMode = min >= 90 && min < 150;
+    if (holdMode) {
+      show("SPEECH MODE", "HOLD ACTIVE");
+      return;
+    }
 
-  if (speechMode) {
-    const loop = [
-      "SPEECH IN PROGRESS",
-      "PLEASE STAND BY"
+    const list = [
+      "What do we want → Freedom",
+      "When do we want it → NOW",
+      "Iran’s voice → Iran’s choice → Reza Pahlavi",
+      "Long live Iran",
+      "Freedom!",
+      "Until Iran is free",
+      "We won’t stop"
     ];
 
-    const index = Math.floor(elapsed / 30000) % 2;
-    show(loop[index], "30 MIN SLOT");
+    const i = Math.floor(t / 30000) % list.length;
+    show(list[i]);
     return;
   }
-
-  const finalSet = [
-    ["Iran’s voice", "Iran’s choice → Reza Pahlavi"],
-    ["Long live Iran", ""],
-    ["Freedom!", "Freedom!"],
-    ["Until Iran is free", "We won’t stop"]
-  ];
-
-  const index = Math.floor(elapsed / 30000) % finalSet.length;
-
-  show(finalSet[index][0], finalSet[index][1]);
 }
-
-/* =========================
-   LOOP ENGINE
-========================= */
-setInterval(run, 1000);
-run();
 </script>
 
 </body>
