@@ -29,24 +29,24 @@ body {
   margin-top:10px;
 }
 
-/* 🔥 MOBILE FRIENDLY ADMIN */
+/* 🔥 BIG MOBILE BUTTONS */
 #admin {
   position:fixed;
   bottom:10px;
   right:10px;
   display:none;
-  background:rgba(0,0,0,0.85);
-  padding:12px;
-  border-radius:12px;
+  background:rgba(0,0,0,0.9);
+  padding:16px;
+  border-radius:16px;
 }
 
-/* 🔥 BIG BUTTONS */
 button {
-  margin:8px;
-  padding:18px 22px;
-  font-size:18px;
-  border-radius:12px;
+  margin:10px;
+  padding:28px 34px;
+  font-size:24px;
+  border-radius:16px;
   border:none;
+  font-weight:bold;
 }
 </style>
 </head>
@@ -72,7 +72,7 @@ button {
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-/* 🔥 FIREBASE CONFIG */
+/* 🔥 FIREBASE */
 const firebaseConfig = {
   apiKey: "AIzaSyCJH-Ev5S2oykfw7r5vYCf10_BlB8quoa0",
   authDomain: "rallycontrol-550d4.firebaseapp.com",
@@ -90,18 +90,22 @@ const controlRef = ref(db, "control");
 /* STATE */
 let hold = false;
 let block = 1;
-let started = false;
 let startTime = 0;
+let pausedAt = null;
+let offset = 0;
 
-/* REALTIME SYNC */
+/* 🔥 SYNC FROM FIREBASE */
 onValue(controlRef, (snap)=>{
   const d = snap.val();
   if(!d) return;
+
   hold = d.hold || false;
   block = d.block || 1;
+  startTime = d.startTime || 0;
+  offset = d.offset || 0;
 });
 
-/* ADMIN LOGIN (long press) */
+/* 🔥 ADMIN MENU UNLOCK */
 let press;
 document.body.addEventListener("mousedown", start);
 document.body.addEventListener("mouseup", stop);
@@ -118,24 +122,45 @@ function start(){
 }
 function stop(){ clearTimeout(press); }
 
-/* MAKE FUNCTIONS GLOBAL (IMPORTANT FIX) */
+/* GLOBAL ACCESS */
 window.setHold = setHold;
 window.jump = jump;
 window.startShow = startShow;
 
-/* ADMIN ACTIONS */
-function setHold(v){
-  update(controlRef, { hold:v, block:block });
-}
-
-function jump(b){
-  update(controlRef, { hold:false, block:b });
-}
-
+/* 🔥 START (SYNC CLOCK) */
 function startShow(){
-  startTime = Date.now();
-  started = true;
-  update(controlRef, { hold:false, block:1 });
+  update(controlRef, {
+    hold:false,
+    block:1,
+    startTime: Date.now(),
+    offset:0
+  });
+}
+
+/* 🔥 HOLD (FREEZE TIME) */
+function setHold(v){
+
+  if(v){
+    // freeze point
+    update(controlRef, {
+      hold:true,
+      offset: Date.now() - startTime
+    });
+  } else {
+    // resume with corrected startTime
+    update(controlRef, {
+      hold:false,
+      startTime: Date.now() - offset
+    });
+  }
+}
+
+/* BLOCK CONTROL */
+function jump(b){
+  update(controlRef, {
+    hold:false,
+    block:b
+  });
 }
 
 /* UI */
@@ -144,16 +169,16 @@ function show(txt, sec){
   document.getElementById("timer").innerText = sec ? sec+"s" : "";
 }
 
-/* LOOP */
+/* 🔥 MASTER LOOP (SYNCED CLOCK) */
 function run(){
 
-  if(!started){
-    show("⏳ STARTING SOON","LIVE will begin shortly");
+  if(!startTime){
+    show("⏳ STARTING SOON","Waiting for host...");
     return;
   }
 
   if(hold){
-    show("⏸ HOLD","");
+    show("⏸ HOLD","Paused");
     return;
   }
 
@@ -167,7 +192,6 @@ function run(){
       "Long live Iran!",
       "Free Iran!",
       "Internet is our right!",
-      "Freedom is our right!",
       "JAAVID SHAH",
       "KING REZA PAHLAVI"
     ];
@@ -184,8 +208,7 @@ function run(){
       "When do we want → NOW",
       "Regime change → NOW",
       "Stand up Fight back",
-      "JAAVID SHAH",
-      "KING REZA PAHLAVI"
+      "JAAVID SHAH"
     ];
     let d=30000;
     let i=Math.floor(t/d)%list.length;
@@ -197,10 +220,9 @@ function run(){
   if(min<75 || block===3){
     let list=[
       "Free Iran!",
-      "We won't be silent!",
       "No to dictatorship!",
       "Down with regime!",
-      "Free internet!",
+      "Freedom is our right",
       "Reza Pahlavi"
     ];
     let d=10000;
@@ -213,7 +235,6 @@ function run(){
   if(min<90 || block===4){
     let list=[
       "Long live Iran!",
-      "Free Iran!",
       "JAAVID SHAH",
       "KING REZA PAHLAVI"
     ];
@@ -225,10 +246,9 @@ function run(){
 
   /* FINAL */
   let list=[
-    "What do we want → Freedom",
-    "When do we want → NOW",
-    "Long live Iran",
-    "We won't stop"
+    "Freedom → NOW",
+    "We won't stop",
+    "Long live Iran"
   ];
 
   let d=30000;
@@ -241,6 +261,5 @@ setInterval(run,1000);
 run();
 
 </script>
-
 </body>
 </html>
