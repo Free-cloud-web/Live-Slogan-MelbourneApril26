@@ -2,46 +2,31 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Rally System</title>
+<title>Rally Live</title>
 
 <style>
 body {
-  margin: 0;
-  background: black;
-  color: white;
-  font-family: Arial;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  flex-direction: column;
-  text-align: center;
+  margin:0;
+  background:black;
+  color:white;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  font-family:Arial;
 }
 
-#main {
-  font-size: 7vw;
-  font-weight: bold;
-}
-
-#timer {
-  font-size: 2vw;
-  margin-top: 15px;
-  color: yellow;
-}
+#main { font-size:7vw; font-weight:bold; text-align:center; }
+#timer { font-size:2vw; color:yellow; margin-top:10px; }
 
 #admin {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  display: none;
-  background: rgba(0,0,0,0.9);
-  border: 1px solid white;
-  padding: 10px;
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  display:none;
 }
-
-button {
-  margin: 5px;
-}
+button { margin:5px; padding:6px; }
 </style>
 </head>
 
@@ -51,9 +36,8 @@ button {
 <div id="timer"></div>
 
 <div id="admin">
-  <button onclick="pause()">Pause</button>
-  <button onclick="resume()">Resume</button>
-  <button onclick="toggleHold()">Hold</button>
+  <button onclick="setHold(true)">HOLD</button>
+  <button onclick="setHold(false)">RESUME</button>
   <button onclick="jump(1)">B1</button>
   <button onclick="jump(2)">B2</button>
   <button onclick="jump(3)">B3</button>
@@ -61,74 +45,86 @@ button {
   <button onclick="jump(5)">B5</button>
 </div>
 
-<script>
-let startTime = new Date("2026-04-25T15:00:00+10:00").getTime();
+<script type="module">
 
-let paused = false;
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+/* 🔥 YOUR CONFIG */
+const firebaseConfig = {
+  apiKey: "AIzaSyCJH-Ev5S2oykfw7r5vYCf10_BlB8quoa0",
+  authDomain: "rallycontrol-550d4.firebaseapp.com",
+  databaseURL: "https://rallycontrol-550d4-default-rtdb.firebaseio.com",
+  projectId: "rallycontrol-550d4",
+  storageBucket: "rallycontrol-550d4.firebasestorage.app",
+  messagingSenderId: "966562447046",
+  appId: "1:966562447046:web:f69b32312f9c5d627fe1c7"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const controlRef = ref(db, "control");
+
+/* GLOBAL STATE (SYNCED) */
 let hold = false;
-let pauseOffset = 0;
-let manualBlock = null;
+let block = 0;
 
-/* LONG PRESS ADMIN */
-let timerPress;
-document.body.addEventListener("mousedown", startPress);
-document.body.addEventListener("mouseup", cancelPress);
-document.body.addEventListener("touchstart", startPress);
-document.body.addEventListener("touchend", cancelPress);
+/* 🔥 REALTIME SYNC */
+onValue(controlRef, (snap)=>{
+  const d = snap.val();
+  if(!d) return;
+  hold = d.hold;
+  block = d.block;
+});
 
-function startPress(){
-  timerPress = setTimeout(()=>{
-    let code = prompt("Admin Code");
+/* ADMIN ACCESS */
+let press;
+document.body.addEventListener("mousedown", start);
+document.body.addEventListener("mouseup", stop);
+document.body.addEventListener("touchstart", start);
+document.body.addEventListener("touchend", stop);
+
+function start(){
+  press = setTimeout(()=>{
+    let code = prompt("Admin code");
     if(code==="26-04"){
       document.getElementById("admin").style.display="block";
     }
   },3000);
 }
-function cancelPress(){
-  clearTimeout(timerPress);
+function stop(){ clearTimeout(press); }
+
+/* 🔥 ADMIN ACTIONS (GLOBAL FOR ALL USERS) */
+function setHold(v){
+  set(controlRef, { hold:v, block:block, pause:false });
 }
 
-/* ADMIN */
-function pause(){
-  paused = true;
-}
-function resume(){
-  paused = false;
-}
-function toggleHold(){
-  hold = !hold;
-}
 function jump(b){
-  manualBlock = b;
+  set(controlRef, { hold:false, block:b, pause:false });
 }
 
-/* DISPLAY */
-function show(text, remaining){
-  document.getElementById("main").innerText = text;
-  document.getElementById("timer").innerText = remaining + "s";
+/* TIME BASE */
+let startTime = new Date("2026-04-25T15:00:00+10:00").getTime();
+
+function show(txt, sec){
+  document.getElementById("main").innerText = txt;
+  document.getElementById("timer").innerText = sec ? sec+"s" : "";
 }
 
-/* CORE */
+/* CORE LOOP */
 function run(){
-  if(paused) return;
-
-  let now = Date.now();
-  let t = now - startTime - pauseOffset;
 
   if(hold){
+    show("⏸ HOLD","");
     return;
   }
 
-  if(t < 0){
-    show("STARTING SOON", Math.floor(-t/1000));
-    return;
-  }
-
+  let t = Date.now() - startTime;
   let min = Math.floor(t/60000);
 
   /* BLOCK 1 */
-  if(min < 20 || manualBlock === 1){
-    let list = [
+  if(min<20 || block===1){
+    let list=[
       "Freedom! Freedom!",
       "Long live Iran!",
       "Free Iran!",
@@ -138,18 +134,15 @@ function run(){
       "JAAVID SHAH",
       "KING REZA PAHLAVI"
     ];
-
-    let duration = 30000;
-    let index = Math.floor(t/duration) % list.length;
-    let remain = Math.ceil((duration - (t % duration))/1000);
-
-    show(list[index], remain);
-    return;
+    let d=30000;
+    let i=Math.floor(t/d)%list.length;
+    let r=Math.ceil((d-(t%d))/1000);
+    show(list[i],r); return;
   }
 
   /* BLOCK 2 */
-  if(min < 30 || manualBlock === 2){
-    let list = [
+  if(min<30 || block===2){
+    let list=[
       "What do we want → Freedom",
       "When do we want → NOW",
       "What do we want → Regime change",
@@ -159,18 +152,15 @@ function run(){
       "JAAVID SHAH",
       "KING REZA PAHLAVI"
     ];
-
-    let duration = 30000;
-    let index = Math.floor(t/duration) % list.length;
-    let remain = Math.ceil((duration - (t % duration))/1000);
-
-    show(list[index], remain);
-    return;
+    let d=30000;
+    let i=Math.floor(t/d)%list.length;
+    let r=Math.ceil((d-(t%d))/1000);
+    show(list[i],r); return;
   }
 
   /* BLOCK 3 */
-  if(min < 75 || manualBlock === 3){
-    let list = [
+  if(min<75 || block===3){
+    let list=[
       "Free Iran!",
       "We won't be silent!",
       "No to dictatorship!",
@@ -180,57 +170,46 @@ function run(){
       "Say his name",
       "Reza Pahlavi"
     ];
-
-    let duration = 10000;
-    let index = Math.floor(t/duration) % list.length;
-    let remain = Math.ceil((duration - (t % duration))/1000);
-
-    show(list[index], remain);
-    return;
+    let d=10000;
+    let i=Math.floor(t/d)%list.length;
+    let r=Math.ceil((d-(t%d))/1000);
+    show(list[i],r); return;
   }
 
   /* BLOCK 4 */
-  if(min < 90 || manualBlock === 4){
-    let list = [
+  if(min<90 || block===4){
+    let list=[
       "Long live Iran!",
       "Free Iran!",
       "Until Iran is free!",
       "JAAVID SHAH",
       "KING REZA PAHLAVI"
     ];
-
-    let duration = 30000;
-    let index = Math.floor(t/duration) % list.length;
-    let remain = Math.ceil((duration - (t % duration))/1000);
-
-    show(list[index], remain);
-    return;
+    let d=30000;
+    let i=Math.floor(t/d)%list.length;
+    let r=Math.ceil((d-(t%d))/1000);
+    show(list[i],r); return;
   }
 
-  /* BLOCK 5 */
-  if(manualBlock === 5 || min >= 90){
-    let list = [
-      "What do we want → Freedom",
-      "When do we want → NOW",
-      "Iran’s voice → Iran’s choice → Reza Pahlavi",
-      "Long live Iran",
-      "Freedom!",
-      "Until Iran is free",
-      "We won’t stop"
-    ];
-
-    let duration = 30000;
-    let index = Math.floor(t/duration) % list.length;
-    let remain = Math.ceil((duration - (t % duration))/1000);
-
-    show(list[index], remain);
-    return;
-  }
+  /* FINAL */
+  let list=[
+    "What do we want → Freedom",
+    "When do we want → NOW",
+    "Iran’s voice → Iran’s choice → Reza Pahlavi",
+    "Long live Iran",
+    "Freedom!",
+    "Until Iran is free",
+    "We won’t stop"
+  ];
+  let d=30000;
+  let i=Math.floor(t/d)%list.length;
+  let r=Math.ceil((d-(t%d))/1000);
+  show(list[i],r);
 }
 
 setInterval(run,1000);
 run();
-</script>
 
+</script>
 </body>
 </html>
