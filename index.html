@@ -29,18 +29,22 @@ body {
   margin-top:10px;
 }
 
-/* 🔥 ADMIN PANEL */
+#next {
+  font-size:1.8vw;
+  color:#aaa;
+  margin-top:8px;
+}
+
 #admin {
   position:fixed;
   bottom:10px;
   right:10px;
   display:none;
-  background:rgba(0,0,0,0.92);
+  background:rgba(0,0,0,0.9);
   padding:16px;
   border-radius:16px;
 }
 
-/* 🔥 BIG BUTTONS */
 button {
   margin:10px;
   padding:28px 36px;
@@ -56,6 +60,7 @@ button {
 
 <div id="main"></div>
 <div id="timer"></div>
+<div id="next"></div>
 
 <div id="admin">
   <button onclick="startShow()">START</button>
@@ -73,7 +78,6 @@ button {
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-/* 🔥 FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyCJH-Ev5S2oykfw7r5vYCf10_BlB8quoa0",
   authDomain: "rallycontrol-550d4.firebaseapp.com",
@@ -88,13 +92,11 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const controlRef = ref(db, "control");
 
-/* STATE */
 let hold = false;
 let block = 1;
 let startTime = 0;
 let blockStart = 0;
 
-/* 🔥 SYNC */
 onValue(controlRef, (snap)=>{
   const d = snap.val();
   if(!d) return;
@@ -105,7 +107,7 @@ onValue(controlRef, (snap)=>{
   blockStart = d.blockStart || 0;
 });
 
-/* 🔥 ADMIN UNLOCK */
+/* ADMIN */
 let press;
 document.body.addEventListener("mousedown", start);
 document.body.addEventListener("mouseup", stop);
@@ -115,23 +117,21 @@ document.body.addEventListener("touchend", stop);
 function start(){
   press = setTimeout(()=>{
     let code = prompt("Admin code");
-    if(code==="2604"){
+    if(code==="26-04"){
       document.getElementById("admin").style.display="block";
     }
   },2000);
 }
 function stop(){ clearTimeout(press); }
 
-/* GLOBAL ACCESS */
 window.setHold = setHold;
 window.jump = jump;
 window.startShow = startShow;
 window.resetShow = resetShow;
 
-/* 🔥 START SHOW */
+/* START */
 function startShow(){
   let now = Date.now();
-
   update(controlRef, {
     hold:false,
     block:1,
@@ -140,7 +140,7 @@ function startShow(){
   });
 }
 
-/* 🔥 RESET → WAITING STATE */
+/* RESET */
 function resetShow(){
   update(controlRef, {
     hold:false,
@@ -150,113 +150,100 @@ function resetShow(){
   });
 }
 
-/* 🔥 HOLD (FREEZE/RESUME PROPERLY) */
+/* HOLD */
 function setHold(v){
-
-  if(v){
-    update(controlRef, {
-      hold:true,
-      blockStart: Date.now()
-    });
-  } else {
-    update(controlRef, {
-      hold:false,
-      blockStart: Date.now()
-    });
-  }
+  update(controlRef, {
+    hold:v
+  });
 }
 
-/* 🔥 BLOCK SWITCH (FIXED) */
+/* BLOCK CHANGE */
 function jump(b){
-
-  let now = Date.now();
-
   update(controlRef, {
     hold:false,
     block:b,
-    blockStart: now
+    blockStart: Date.now()
   });
 }
 
 /* UI */
-function show(txt, sec){
+function show(txt, sec, next){
   document.getElementById("main").innerText = txt;
-  document.getElementById("timer").innerText = sec ? sec+"s" : "";
+  document.getElementById("timer").innerText = sec ? sec + "s" : "";
+  document.getElementById("next").innerText = next ? "Next slogan: " + next + "s" : "";
 }
 
-/* 🔥 MAIN LOOP */
+/* MAIN LOOP */
 function run(){
 
   if(!startTime){
-    show("⏳ STARTING SOON","Waiting for host...");
+    show("⏳ STARTING SOON","",0);
     return;
   }
 
   if(hold){
-    show("⏸ HOLD","");
+    show("⏸ HOLD","",0);
     return;
   }
 
   let t = Date.now() - blockStart;
 
-  /* BLOCK 1 */
+  function calc(list, duration){
+
+    let index = Math.floor(t / duration) % list.length;
+
+    let currentText = list[index];
+
+    let timeInCycle = t % duration;
+    let nextIn = Math.ceil((duration - timeInCycle) / 1000);
+
+    show(currentText, nextIn, nextIn);
+
+  }
+
+  /* BLOCKS */
+
   if(block===1){
-    let list=[
+    calc([
       "Freedom! Freedom!",
       "Long live Iran!",
       "Free Iran!",
       "Internet is our right!",
       "JAAVID SHAH"
-    ];
-    let d=30000;
-    let i=Math.floor(t/d)%list.length;
-    let r=Math.ceil((d-(t%d))/1000);
-    show(list[i],r); return;
+    ],30000);
+    return;
   }
 
-  /* BLOCK 2 */
   if(block===2){
-    let list=[
+    calc([
       "What do we want → Freedom",
       "When do we want → NOW",
       "Regime change → NOW",
       "Stand up Fight back"
-    ];
-    let d=30000;
-    let i=Math.floor(t/d)%list.length;
-    let r=Math.ceil((d-(t%d))/1000);
-    show(list[i],r); return;
+    ],30000);
+    return;
   }
 
-  /* BLOCK 3 */
   if(block===3){
-    let list=[
+    calc([
       "Free Iran!",
       "No to dictatorship!",
       "Down with regime!",
       "Freedom is our right"
-    ];
-    let d=10000;
-    let i=Math.floor(t/d)%list.length;
-    let r=Math.ceil((t%d)/1000);
-    show(list[i],r); return;
+    ],10000);
+    return;
   }
 
-  /* BLOCK 4 */
   if(block===4){
-    let list=[
+    calc([
       "Long live Iran!",
       "JAAVID SHAH",
       "KING REZA PAHLAVI"
-    ];
-    let d=30000;
-    let i=Math.floor(t/d)%list.length;
-    let r=Math.ceil((d-(t%d))/1000);
-    show(list[i],r); return;
+    ],30000);
+    return;
   }
 
-  show("LIVE","");
-
+  show("LIVE","",0);
 }
 
 setInterval(run,1000);
