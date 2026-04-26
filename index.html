@@ -29,7 +29,7 @@ body {
   margin-top:10px;
 }
 
-/* 🔥 BIG MOBILE BUTTONS */
+/* 🔥 ADMIN PANEL */
 #admin {
   position:fixed;
   bottom:10px;
@@ -40,6 +40,7 @@ body {
   border-radius:16px;
 }
 
+/* 🔥 BIG BUTTONS */
 button {
   margin:10px;
   padding:28px 34px;
@@ -58,6 +59,7 @@ button {
 
 <div id="admin">
   <button onclick="startShow()">START</button>
+  <button onclick="resetShow()">RESET</button>
   <button onclick="setHold(true)">HOLD</button>
   <button onclick="setHold(false)">RESUME</button>
   <button onclick="jump(1)">B1</button>
@@ -91,10 +93,8 @@ const controlRef = ref(db, "control");
 let hold = false;
 let block = 1;
 let startTime = 0;
-let pausedAt = null;
-let offset = 0;
 
-/* 🔥 SYNC FROM FIREBASE */
+/* 🔥 SYNC */
 onValue(controlRef, (snap)=>{
   const d = snap.val();
   if(!d) return;
@@ -102,10 +102,9 @@ onValue(controlRef, (snap)=>{
   hold = d.hold || false;
   block = d.block || 1;
   startTime = d.startTime || 0;
-  offset = d.offset || 0;
 });
 
-/* 🔥 ADMIN MENU UNLOCK */
+/* ADMIN ACCESS */
 let press;
 document.body.addEventListener("mousedown", start);
 document.body.addEventListener("mouseup", stop);
@@ -122,40 +121,38 @@ function start(){
 }
 function stop(){ clearTimeout(press); }
 
-/* GLOBAL ACCESS */
+/* GLOBAL */
 window.setHold = setHold;
 window.jump = jump;
 window.startShow = startShow;
+window.resetShow = resetShow;
 
-/* 🔥 START (SYNC CLOCK) */
+/* 🔥 START SHOW */
 function startShow(){
   update(controlRef, {
     hold:false,
     block:1,
-    startTime: Date.now(),
-    offset:0
+    startTime: Date.now()
   });
 }
 
-/* 🔥 HOLD (FREEZE TIME) */
-function setHold(v){
-
-  if(v){
-    // freeze point
-    update(controlRef, {
-      hold:true,
-      offset: Date.now() - startTime
-    });
-  } else {
-    // resume with corrected startTime
-    update(controlRef, {
-      hold:false,
-      startTime: Date.now() - offset
-    });
-  }
+/* 🔥 RESET → BACK TO WAITING */
+function resetShow(){
+  update(controlRef, {
+    hold:false,
+    block:1,
+    startTime: 0
+  });
 }
 
-/* BLOCK CONTROL */
+/* 🔥 HOLD */
+function setHold(v){
+  update(controlRef, {
+    hold:v
+  });
+}
+
+/* BLOCK SWITCH */
 function jump(b){
   update(controlRef, {
     hold:false,
@@ -169,7 +166,7 @@ function show(txt, sec){
   document.getElementById("timer").innerText = sec ? sec+"s" : "";
 }
 
-/* 🔥 MASTER LOOP (SYNCED CLOCK) */
+/* LOOP */
 function run(){
 
   if(!startTime){
@@ -178,7 +175,7 @@ function run(){
   }
 
   if(hold){
-    show("⏸ HOLD","Paused");
+    show("⏸ HOLD","");
     return;
   }
 
