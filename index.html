@@ -17,16 +17,37 @@ body {
   font-family:Arial;
 }
 
-#main { font-size:7vw; font-weight:bold; text-align:center; }
-#timer { font-size:2vw; color:yellow; margin-top:10px; }
+#main {
+  font-size:7vw;
+  font-weight:bold;
+  text-align:center;
+}
 
+#timer {
+  font-size:2vw;
+  color:yellow;
+  margin-top:10px;
+}
+
+/* 🔥 MOBILE FRIENDLY ADMIN */
 #admin {
   position:fixed;
-  bottom:20px;
-  right:20px;
+  bottom:10px;
+  right:10px;
   display:none;
+  background:rgba(0,0,0,0.85);
+  padding:12px;
+  border-radius:12px;
 }
-button { margin:5px; padding:6px; }
+
+/* 🔥 BIG BUTTONS */
+button {
+  margin:8px;
+  padding:18px 22px;
+  font-size:18px;
+  border-radius:12px;
+  border:none;
+}
 </style>
 </head>
 
@@ -36,6 +57,7 @@ button { margin:5px; padding:6px; }
 <div id="timer"></div>
 
 <div id="admin">
+  <button onclick="startShow()">START</button>
   <button onclick="setHold(true)">HOLD</button>
   <button onclick="setHold(false)">RESUME</button>
   <button onclick="jump(1)">B1</button>
@@ -48,15 +70,15 @@ button { margin:5px; padding:6px; }
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-/* 🔥 YOUR CONFIG */
+/* 🔥 FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyCJH-Ev5S2oykfw7r5vYCf10_BlB8quoa0",
   authDomain: "rallycontrol-550d4.firebaseapp.com",
   databaseURL: "https://rallycontrol-550d4-default-rtdb.firebaseio.com",
   projectId: "rallycontrol-550d4",
-  storageBucket: "rallycontrol-550d4.firebasestorage.app",
+  storageBucket: "rallycontrol-550d4.appspot.com",
   messagingSenderId: "966562447046",
   appId: "1:966562447046:web:f69b32312f9c5d627fe1c7"
 };
@@ -65,19 +87,21 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const controlRef = ref(db, "control");
 
-/* GLOBAL STATE (SYNCED) */
+/* STATE */
 let hold = false;
-let block = 0;
+let block = 1;
+let started = false;
+let startTime = 0;
 
-/* 🔥 REALTIME SYNC */
+/* REALTIME SYNC */
 onValue(controlRef, (snap)=>{
   const d = snap.val();
   if(!d) return;
-  hold = d.hold;
-  block = d.block;
+  hold = d.hold || false;
+  block = d.block || 1;
 });
 
-/* ADMIN ACCESS */
+/* ADMIN LOGIN (long press) */
 let press;
 document.body.addEventListener("mousedown", start);
 document.body.addEventListener("mouseup", stop);
@@ -90,29 +114,43 @@ function start(){
     if(code==="26-04"){
       document.getElementById("admin").style.display="block";
     }
-  },3000);
+  },2000);
 }
 function stop(){ clearTimeout(press); }
 
-/* 🔥 ADMIN ACTIONS (GLOBAL FOR ALL USERS) */
+/* MAKE FUNCTIONS GLOBAL (IMPORTANT FIX) */
+window.setHold = setHold;
+window.jump = jump;
+window.startShow = startShow;
+
+/* ADMIN ACTIONS */
 function setHold(v){
-  set(controlRef, { hold:v, block:block, pause:false });
+  update(controlRef, { hold:v, block:block });
 }
 
 function jump(b){
-  set(controlRef, { hold:false, block:b, pause:false });
+  update(controlRef, { hold:false, block:b });
 }
 
-/* TIME BASE */
-let startTime = new Date("2026-04-25T15:00:00+10:00").getTime();
+function startShow(){
+  startTime = Date.now();
+  started = true;
+  update(controlRef, { hold:false, block:1 });
+}
 
+/* UI */
 function show(txt, sec){
   document.getElementById("main").innerText = txt;
   document.getElementById("timer").innerText = sec ? sec+"s" : "";
 }
 
-/* CORE LOOP */
+/* LOOP */
 function run(){
+
+  if(!started){
+    show("⏳ STARTING SOON","LIVE will begin shortly");
+    return;
+  }
 
   if(hold){
     show("⏸ HOLD","");
@@ -128,7 +166,6 @@ function run(){
       "Freedom! Freedom!",
       "Long live Iran!",
       "Free Iran!",
-      "Melbourne stands with Iran",
       "Internet is our right!",
       "Freedom is our right!",
       "JAAVID SHAH",
@@ -145,9 +182,7 @@ function run(){
     let list=[
       "What do we want → Freedom",
       "When do we want → NOW",
-      "What do we want → Regime change",
-      "When do we want → NOW",
-      "NOW NOW NOW",
+      "Regime change → NOW",
       "Stand up Fight back",
       "JAAVID SHAH",
       "KING REZA PAHLAVI"
@@ -166,13 +201,11 @@ function run(){
       "No to dictatorship!",
       "Down with regime!",
       "Free internet!",
-      "Freedom is our right!",
-      "Say his name",
       "Reza Pahlavi"
     ];
     let d=10000;
     let i=Math.floor(t/d)%list.length;
-    let r=Math.ceil((d-(t%d))/1000);
+    let r=Math.ceil((t%d)/1000);
     show(list[i],r); return;
   }
 
@@ -181,7 +214,6 @@ function run(){
     let list=[
       "Long live Iran!",
       "Free Iran!",
-      "Until Iran is free!",
       "JAAVID SHAH",
       "KING REZA PAHLAVI"
     ];
@@ -195,12 +227,10 @@ function run(){
   let list=[
     "What do we want → Freedom",
     "When do we want → NOW",
-    "Iran’s voice → Iran’s choice → Reza Pahlavi",
     "Long live Iran",
-    "Freedom!",
-    "Until Iran is free",
-    "We won’t stop"
+    "We won't stop"
   ];
+
   let d=30000;
   let i=Math.floor(t/d)%list.length;
   let r=Math.ceil((d-(t%d))/1000);
@@ -211,5 +241,6 @@ setInterval(run,1000);
 run();
 
 </script>
+
 </body>
 </html>
