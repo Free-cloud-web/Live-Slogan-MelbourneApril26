@@ -23,27 +23,24 @@ body {
   font-weight: bold;
 }
 
-#sub {
-  font-size: 3vw;
-  margin-top: 20px;
+#timer {
+  font-size: 2vw;
+  margin-top: 15px;
   color: yellow;
 }
 
-#adminPanel {
+#admin {
   position: fixed;
   bottom: 20px;
   right: 20px;
+  display: none;
   background: rgba(0,0,0,0.9);
   border: 1px solid white;
   padding: 10px;
-  display: none;
-  flex-direction: column;
-  gap: 10px;
 }
 
 button {
-  padding: 8px;
-  font-size: 14px;
+  margin: 5px;
 }
 </style>
 </head>
@@ -51,107 +48,87 @@ button {
 <body>
 
 <div id="main"></div>
-<div id="sub"></div>
+<div id="timer"></div>
 
-<div id="adminPanel">
+<div id="admin">
   <button onclick="pause()">Pause</button>
   <button onclick="resume()">Resume</button>
-  <button onclick="hold()">Hold</button>
-  <button onclick="go(1)">Block 1</button>
-  <button onclick="go(2)">Block 2</button>
-  <button onclick="go(3)">Block 3</button>
-  <button onclick="go(4)">Block 4</button>
-  <button onclick="go(5)">Final</button>
+  <button onclick="toggleHold()">Hold</button>
+  <button onclick="jump(1)">B1</button>
+  <button onclick="jump(2)">B2</button>
+  <button onclick="jump(3)">B3</button>
+  <button onclick="jump(4)">B4</button>
+  <button onclick="jump(5)">B5</button>
 </div>
 
 <script>
-/* =========================
-   TIME CONFIG (Melbourne 3PM)
-========================= */
-const START = new Date("2026-04-25T15:00:00+10:00").getTime();
+let startTime = new Date("2026-04-25T15:00:00+10:00").getTime();
 
 let paused = false;
-let holdMode = false;
+let hold = false;
+let pauseOffset = 0;
 let manualBlock = null;
-let pauseTime = 0;
 
-/* =========================
-   ADMIN ACCESS (long press)
-========================= */
-let pressTimer;
-
+/* LONG PRESS ADMIN */
+let timerPress;
 document.body.addEventListener("mousedown", startPress);
 document.body.addEventListener("mouseup", cancelPress);
 document.body.addEventListener("touchstart", startPress);
 document.body.addEventListener("touchend", cancelPress);
 
-function startPress() {
-  pressTimer = setTimeout(() => {
-    const code = prompt("Admin Code:");
-    if (code === "2604") {
-      document.getElementById("adminPanel").style.display = "flex";
+function startPress(){
+  timerPress = setTimeout(()=>{
+    let code = prompt("Admin Code");
+    if(code==="26-04"){
+      document.getElementById("admin").style.display="block";
     }
-  }, 3000);
+  },3000);
+}
+function cancelPress(){
+  clearTimeout(timerPress);
 }
 
-function cancelPress() {
-  clearTimeout(pressTimer);
-}
-
-/* =========================
-   ADMIN FUNCTIONS
-========================= */
-function pause() {
+/* ADMIN */
+function pause(){
   paused = true;
-  pauseTime = Date.now();
 }
-
-function resume() {
-  if (paused) {
-    START += (Date.now() - pauseTime);
-  }
+function resume(){
   paused = false;
 }
-
-function hold() {
-  holdMode = !holdMode;
+function toggleHold(){
+  hold = !hold;
 }
-
-function go(b) {
+function jump(b){
   manualBlock = b;
 }
 
-/* =========================
-   DISPLAY
-========================= */
-function show(main, sub="") {
-  document.getElementById("main").innerText = main;
-  document.getElementById("sub").innerText = sub;
+/* DISPLAY */
+function show(text, remaining){
+  document.getElementById("main").innerText = text;
+  document.getElementById("timer").innerText = remaining + "s";
 }
 
-/* =========================
-   SYSTEM LOOP
-========================= */
-setInterval(run, 1000);
+/* CORE */
+function run(){
+  if(paused) return;
 
-function run() {
-  if (paused) return;
+  let now = Date.now();
+  let t = now - startTime - pauseOffset;
 
-  const now = Date.now();
-  const t = now - START;
-
-  if (t < 0) {
-    show("RALLY STARTS SOON", "");
+  if(hold){
     return;
   }
 
-  const min = Math.floor(t / 60000);
+  if(t < 0){
+    show("STARTING SOON", Math.floor(-t/1000));
+    return;
+  }
 
-  /* =========================
-     BLOCK 1 (0–20 min)
-  ========================= */
-  if (min < 20 || manualBlock === 1) {
-    const list = [
+  let min = Math.floor(t/60000);
+
+  /* BLOCK 1 */
+  if(min < 20 || manualBlock === 1){
+    let list = [
       "Freedom! Freedom!",
       "Long live Iran!",
       "Free Iran!",
@@ -162,70 +139,59 @@ function run() {
       "KING REZA PAHLAVI"
     ];
 
-    const i = Math.floor(t / 30000) % list.length;
-    show(list[i]);
+    let duration = 30000;
+    let index = Math.floor(t/duration) % list.length;
+    let remain = Math.ceil((duration - (t % duration))/1000);
+
+    show(list[index], remain);
     return;
   }
 
-  /* =========================
-     BLOCK 2 (20–30 min)
-  ========================= */
-  if (min < 30 || manualBlock === 2) {
-    const list = [
-      "What do we want? → Freedom!",
-      "When do we want it? → NOW!",
-      "What do we want? → Regime change!",
-      "When do we want it? → NOW!",
-      "NOW! NOW! NOW!",
-      "Stand up! Fight back!",
+  /* BLOCK 2 */
+  if(min < 30 || manualBlock === 2){
+    let list = [
+      "What do we want → Freedom",
+      "When do we want → NOW",
+      "What do we want → Regime change",
+      "When do we want → NOW",
+      "NOW NOW NOW",
+      "Stand up Fight back",
       "JAAVID SHAH",
       "KING REZA PAHLAVI"
     ];
 
-    const i = Math.floor(t / 30000) % list.length;
-    show(list[i]);
+    let duration = 30000;
+    let index = Math.floor(t/duration) % list.length;
+    let remain = Math.ceil((duration - (t % duration))/1000);
+
+    show(list[index], remain);
     return;
   }
 
-  /* =========================
-     BLOCK 3 (MARCH 30–75)
-  ========================= */
-  if (min < 75 || manualBlock === 3) {
-    const waves = [
-      [
-        "Free Iran!",
-        "We won't be silent!",
-        "JAAVID SHAH"
-      ],
-      [
-        "No to regime!",
-        "Down with dictatorship!",
-        "KING REZA PAHLAVI"
-      ],
-      [
-        "Free internet!",
-        "Freedom is our right!",
-        "JAAVID SHAH"
-      ],
-      [
-        "Say his name",
-        "Reza Pahlavi",
-        "KING REZA PAHLAVI"
-      ]
+  /* BLOCK 3 */
+  if(min < 75 || manualBlock === 3){
+    let list = [
+      "Free Iran!",
+      "We won't be silent!",
+      "No to dictatorship!",
+      "Down with regime!",
+      "Free internet!",
+      "Freedom is our right!",
+      "Say his name",
+      "Reza Pahlavi"
     ];
 
-    const w = Math.floor(t / 420000) % waves.length;
-    const i = Math.floor(t / 10000) % waves[w].length;
+    let duration = 10000;
+    let index = Math.floor(t/duration) % list.length;
+    let remain = Math.ceil((duration - (t % duration))/1000);
 
-    show(waves[w][i]);
+    show(list[index], remain);
     return;
   }
 
-  /* =========================
-     BLOCK 4 (Arrival)
-  ========================= */
-  if (min < 90 || manualBlock === 4) {
-    const list = [
+  /* BLOCK 4 */
+  if(min < 90 || manualBlock === 4){
+    let list = [
       "Long live Iran!",
       "Free Iran!",
       "Until Iran is free!",
@@ -233,24 +199,19 @@ function run() {
       "KING REZA PAHLAVI"
     ];
 
-    const i = Math.floor(t / 30000) % list.length;
-    show(list[i]);
+    let duration = 30000;
+    let index = Math.floor(t/duration) % list.length;
+    let remain = Math.ceil((duration - (t % duration))/1000);
+
+    show(list[index], remain);
     return;
   }
 
-  /* =========================
-     BLOCK 5 (FINAL / SPEECH)
-  ========================= */
-  if (manualBlock === 5 || min >= 90) {
-
-    if (holdMode) {
-      show("SPEECH MODE", "HOLD ACTIVE");
-      return;
-    }
-
-    const list = [
+  /* BLOCK 5 */
+  if(manualBlock === 5 || min >= 90){
+    let list = [
       "What do we want → Freedom",
-      "When do we want it → NOW",
+      "When do we want → NOW",
       "Iran’s voice → Iran’s choice → Reza Pahlavi",
       "Long live Iran",
       "Freedom!",
@@ -258,11 +219,17 @@ function run() {
       "We won’t stop"
     ];
 
-    const i = Math.floor(t / 30000) % list.length;
-    show(list[i]);
+    let duration = 30000;
+    let index = Math.floor(t/duration) % list.length;
+    let remain = Math.ceil((duration - (t % duration))/1000);
+
+    show(list[index], remain);
     return;
   }
 }
+
+setInterval(run,1000);
+run();
 </script>
 
 </body>
