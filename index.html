@@ -23,16 +23,10 @@ body {
   text-align:center;
 }
 
-#timer {
-  font-size:2vw;
-  color:yellow;
-  margin-top:10px;
-}
-
 #next {
-  font-size:1.8vw;
-  color:#aaa;
-  margin-top:8px;
+  font-size:2.2vw;
+  color:yellow;
+  margin-top:12px;
 }
 
 #admin {
@@ -59,7 +53,6 @@ button {
 <body>
 
 <div id="main"></div>
-<div id="timer"></div>
 <div id="next"></div>
 
 <div id="admin">
@@ -97,6 +90,7 @@ let block = 1;
 let startTime = 0;
 let blockStart = 0;
 
+/* SYNC */
 onValue(controlRef, (snap)=>{
   const d = snap.val();
   if(!d) return;
@@ -107,7 +101,7 @@ onValue(controlRef, (snap)=>{
   blockStart = d.blockStart || 0;
 });
 
-/* ADMIN */
+/* ADMIN UNLOCK */
 let press;
 document.body.addEventListener("mousedown", start);
 document.body.addEventListener("mouseup", stop);
@@ -124,6 +118,7 @@ function start(){
 }
 function stop(){ clearTimeout(press); }
 
+/* GLOBAL */
 window.setHold = setHold;
 window.jump = jump;
 window.startShow = startShow;
@@ -152,9 +147,7 @@ function resetShow(){
 
 /* HOLD */
 function setHold(v){
-  update(controlRef, {
-    hold:v
-  });
+  update(controlRef, { hold:v });
 }
 
 /* BLOCK CHANGE */
@@ -167,44 +160,39 @@ function jump(b){
 }
 
 /* UI */
-function show(txt, sec, next){
-  document.getElementById("main").innerText = txt;
-  document.getElementById("timer").innerText = sec ? sec + "s" : "";
-  document.getElementById("next").innerText = next ? "Next slogan: " + next + "s" : "";
+function show(text, next){
+  document.getElementById("main").innerText = text;
+  document.getElementById("next").innerText = "Next slogan: " + next + "s";
 }
 
-/* MAIN LOOP */
+/* CORE */
 function run(){
 
   if(!startTime){
-    show("⏳ STARTING SOON","",0);
+    show("⏳ STARTING SOON",0);
     return;
   }
 
   if(hold){
-    show("⏸ HOLD","",0);
+    show("⏸ HOLD",0);
     return;
   }
 
   let t = Date.now() - blockStart;
 
-  function calc(list, duration){
+  function play(list, duration){
 
     let index = Math.floor(t / duration) % list.length;
+    let text = list[index];
 
-    let currentText = list[index];
+    let passed = t % duration;
+    let next = Math.ceil((duration - passed) / 1000);
 
-    let timeInCycle = t % duration;
-    let nextIn = Math.ceil((duration - timeInCycle) / 1000);
-
-    show(currentText, nextIn, nextIn);
-
+    show(text, next);
   }
 
-  /* BLOCKS */
-
   if(block===1){
-    calc([
+    play([
       "Freedom! Freedom!",
       "Long live Iran!",
       "Free Iran!",
@@ -215,7 +203,7 @@ function run(){
   }
 
   if(block===2){
-    calc([
+    play([
       "What do we want → Freedom",
       "When do we want → NOW",
       "Regime change → NOW",
@@ -225,7 +213,7 @@ function run(){
   }
 
   if(block===3){
-    calc([
+    play([
       "Free Iran!",
       "No to dictatorship!",
       "Down with regime!",
@@ -235,7 +223,7 @@ function run(){
   }
 
   if(block===4){
-    calc([
+    play([
       "Long live Iran!",
       "JAAVID SHAH",
       "KING REZA PAHLAVI"
@@ -243,7 +231,7 @@ function run(){
     return;
   }
 
-  show("LIVE","",0);
+  show("LIVE",0);
 }
 
 setInterval(run,1000);
